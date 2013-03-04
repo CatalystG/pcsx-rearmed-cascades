@@ -3,6 +3,8 @@ import bb.cascades 1.0
 Container {
     property alias button: _button.text
     property int button_id
+    property int device
+    property int player
     
     bottomPadding: 20
     
@@ -24,13 +26,13 @@ Container {
 	        horizontalAlignment: HorizontalAlignment.Right
 	        verticalAlignment: VerticalAlignment.Center
 	        minWidth: 200
-	        text: _frontend.getControllerValue(player, button_id).toString()
+	        text: _frontend.getControllerValue(player, button_id, device).toString()
 	        
 	        onClicked: {
 	            var mapButton = _frontend.mapButton();
 	            if(mapButton != -1){
-	                _frontend.setControllerValue(player, button_id, mapButton);
-	                _mapping.text = mapButton.toString();
+	                _frontend.setControllerValue(player, button_id, mapButton, device);
+	                _mapping.text = _frontend.getControllerValue(player, button_id, device).toString();
 	            }
 	        }
 	    }

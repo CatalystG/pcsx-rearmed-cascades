@@ -158,6 +158,56 @@ void Frontend::create_button_mapper() {
 	screen_request_events(screen_cxt);
 }
 
+void discoverControllers()
+{
+    // Get an array of all available devices.
+    int deviceCount = 0;
+    screen_get_context_property_iv(screen_cxt, SCREEN_PROPERTY_DEVICE_COUNT, &deviceCount);
+    qDebug() << "Discover COntrollers: " << deviceCount;
+    screen_device_t* devices = (screen_device_t*)calloc(deviceCount, sizeof(screen_device_t));
+    qDebug() << "Discover COntrollers: " << deviceCount;
+    screen_get_context_property_pv(screen_cxt, SCREEN_PROPERTY_DEVICES, (void**)devices);
+
+    // Scan the list for gamepad and joystick devices.
+    int i;
+
+    for (i = 0; i < deviceCount; i++) {
+        int type = 0;
+        screen_get_device_property_iv(devices[i], SCREEN_PROPERTY_TYPE, &type);
+
+        qDebug() << "Found device";
+        if ( (type == SCREEN_EVENT_GAMEPAD) || (type == SCREEN_EVENT_JOYSTICK)) {
+        	qDebug() << "Found device GAMEPAD/JOYSTICK";
+
+            // Assign this device to control Player 1 or Player 2.
+        	cfg_bb10.controllers[0].handle = devices[i];
+        	// Query libscreen for information about this device.
+			screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_TYPE, &cfg_bb10.controllers[0].type);
+			screen_get_device_property_cv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ID_STRING, sizeof(cfg_bb10.controllers[0].id), cfg_bb10.controllers[0].id);
+
+			// Check for the existence of analog sticks.
+			if (!screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ANALOG0, cfg_bb10.controllers[0].analog0)) {
+				++cfg_bb10.controllers[0].analogCount;
+			}
+
+			if (!screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ANALOG1, cfg_bb10.controllers[0].analog1)) {
+				++cfg_bb10.controllers[0].analogCount;
+			}
+
+			if (cfg_bb10.controllers[0].type == SCREEN_EVENT_GAMEPAD) {
+				printf("Gamepad device ID: %s", cfg_bb10.controllers[0].id);
+			} else {
+				printf("Joystick device: %s", cfg_bb10.controllers[0].id);
+			}
+
+			break;
+        }
+    }
+
+    if(devices)
+    	free(devices);
+}
+
 Frontend::Frontend()
 {
 	qmlRegisterType<bb::cascades::pickers::FilePicker>("bb.cascades.pickers", 1, 0, "FilePicker");
@@ -227,8 +277,16 @@ int Frontend::loadConfigFromJson(QString file) {
 
 	m_controllers[0].device = data["device"].toInt();
 
-	for(i=0;i<16;++i) {
-		m_controllers[0].buttons[i] = data["buttons"].toList()[i].toInt();
+	if(data["buttons"].isValid()){
+		for(i=0;i<16;++i) {
+			m_controllers[0].buttons[i] = data["buttons"].toList()[i].toInt();
+		}
+	}
+
+	if(data["gamepad"].isValid()){
+		for(i=0;i<16;++i) {
+			m_controllers[0].gamepad[i] = data["gamepad"].toList()[i].toInt();
+		}
 	}
 
 	return 0;
@@ -249,6 +307,14 @@ void Frontend::saveConfigToJson(QString file) {
 
 	data["buttons"] = QVariant(buttons);
 
+	QVariantList gamepad;
+
+	for(i=0;i<16;++i) {
+		gamepad.append(QVariant(m_controllers[0].gamepad[i]));
+	}
+
+	data["gamepad"] = QVariant(gamepad);
+
 	// Create a JsonDataAccess object and save the data to the file
 	JsonDataAccess jda;
 	jda.save(QVariant(data), file);
@@ -264,8 +330,8 @@ void Frontend::onManualExit() {
 	bb10_pcsx_stop_emulator();
 
 	int msg = 2;
-	//MsgSend(coid, &msg, sizeof(msg), NULL, 0);
-	//wait();
+	MsgSend(coid, &msg, sizeof(msg), NULL, 0);
+	wait();
 	printf("FInished waiting!\n");fflush(stdout);
 	quit();
 
@@ -282,6 +348,8 @@ void Frontend::run()
 	bps_event_t *event = NULL;
 
 	create_button_mapper();
+
+	discoverControllers();
 
 	while(1) {
 		while(1){
@@ -320,6 +388,7 @@ void Frontend::run()
 						int screen_val;
 						screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_TYPE, &screen_val);
 
+						//TODO: Should we only let the buttons through that we are trying to map?
 						if(screen_val == SCREEN_EVENT_MTOUCH_TOUCH){
 							//This is touch screen event
 							sym = -1;
@@ -327,6 +396,8 @@ void Frontend::run()
 						} else if(screen_val == SCREEN_EVENT_KEYBOARD) {
 							screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_KEY_SYM, &sym);
 							break;
+						} else if( (screen_val == SCREEN_EVENT_GAMEPAD) || (screen_val == SCREEN_EVENT_JOYSTICK) ){
+							screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_BUTTONS, &sym);
 						}
 					}
 				}
@@ -342,12 +413,7 @@ void Frontend::run()
 			MsgReply(rcvid, 0, &ret, sizeof(ret));
 		}
 
-		//Cheats
-		//printf("CheatList: %s\n", CheatList.toAscii().constData());
-		//m64p->l_CheatNumList = strdup((char*)CheatList.toAscii().constData());
-		//bb10_pcsx_set_rom((char*)mRom.toAscii().constData());
 		bb10_main(&screen_cxt, Application::instance()->mainWindow()->groupId().toAscii().constData(), "emulator_pcsx");
-		//m64p->Start();
 	}
 }
 
@@ -371,20 +437,40 @@ void Frontend::saveValueFor(const QString &objectName, const QString &inputValue
     settings.setValue(objectName, QVariant(inputValue));
 }
 
-void Frontend::setControllerValue(int player, int button_id, int map){
+void Frontend::setControllerValue(int player, int button_id, int map, int device){
 	if(button_id == -1){
 		m_controllers[player].device = map;
+		return;
 	}
 
-	m_controllers[player].buttons[button_id] = map;
+	qDebug() << "getControllerValue Device: " << device;
+
+	if(m_controllers[player].device == 2) {
+		m_controllers[player].buttons[button_id] = map;
+		qDebug() << "setControllerValue Value: " << map;
+	} else if(m_controllers[player].device == 3) {
+		m_controllers[player].gamepad[button_id] = map;
+		qDebug() << "setControllerValue Value: " << map;
+	}
 }
 
-int Frontend::getControllerValue(int player, int button_id){
+int Frontend::getControllerValue(int player, int button_id, int device){
 	if(button_id == -1){
 		return m_controllers[player].device;
 	}
 
-	return m_controllers[player].buttons[button_id];
+	qDebug() << "getControllerValue Device: " << device;
+	if(m_controllers[player].device == 2) {
+		int tmp = m_controllers[player].buttons[button_id];
+		qDebug() << "getControllerValue Value: " << tmp;
+		return tmp;
+	} else if(m_controllers[player].device == 3) {
+		int tmp = m_controllers[player].gamepad[button_id];
+		qDebug() << "getControllerValue Value: " << tmp;
+		return tmp;
+	}
+
+	return 0;
 }
 
 void Frontend::startEmulator(int msg_code)
@@ -443,40 +529,50 @@ void Frontend::onBoxArtRecieved(const QString &info, bool success)
 
 		const QVariant variant = dataAccess.loadFromBuffer(info);
 
-		const QVariantMap games = variant.toMap();
+		qDebug() << variant;
+		if(variant.canConvert(QVariant::Map)) {
+			const QVariantMap games = variant.toMap();
 
-		//qDebug() << "URL: " << games["baseImgUrl"];
-		url.append(games["baseImgUrl"].toString());
+			url.append(games["baseImgUrl"].toString());
 
-		//IF there is one game, games["game"] will be a map rather than list
-		QVariantList game = games["Game"].toList();
+			qDebug() << "About to turn into list...";
+			//IF there is one game, games["game"] will be a map rather than list
+			QVariantList game = games["Game"].toList();
 
-		//TODO: Will crash with one game
-		//qDebug() << "GAME: " << game;
+			qDebug() << "GAME: " << game;
 
-		QVariantMap selected;
-		if(!game.isEmpty()){
-			selected = game[0].toMap();
-		} else {
-			selected = games["Game"].toMap();
+			QVariantMap selected;
+
+			//More than one game
+			if(!game.isEmpty()){
+				selected = game[0].toMap();
+			//Only one game
+			} else if (games["Game"].isValid()) {
+				selected = games["Game"].toMap();
+			//No games found.
+			} else {
+				selected.clear();
+			}
+
+			if(!selected.isEmpty()) {
+				QVariantMap images = selected["Images"].toMap();
+				QVariantList boxart = images["boxart"].toList();
+
+				url.append((boxart[1].toMap())[".data"].toString());
+
+				//Could make obj once, and reuse
+				if(m_boxart) {
+					delete m_boxart;
+				}
+
+				m_boxart = new ImageLoader(url, mRom);
+				emit boxArtChanged(m_boxart);
+
+				m_boxart->load();
+			}
 		}
-		QVariantMap images = selected["Images"].toMap();
-		QVariantList boxart = images["boxart"].toList();
 
-		url.append((boxart[1].toMap())[".data"].toString());
-
-		//qDebug() << "FULL URL: " << url;
-
-		//Could make obj once, and reuse
-		if(m_boxart) {
-			delete m_boxart;
-		}
-
-		m_boxart = new ImageLoader(url, mRom);
-		emit boxArtChanged(m_boxart);
-
-		m_boxart->load();
-
+		qDebug() << "Done trying to load art...";
 		m_boxartLoaded = true;
 		emit boxartLoadedChanged(m_boxartLoaded);
     }
@@ -496,8 +592,8 @@ void Frontend::setSettings()
 	cfg_bb10.bios_name = strdup((char*)getValueFor(QString("bios_name"), QString("SCPH1001.BIN")).toAscii().constData());
 
 	//AUDIO
-	cfg_bb10.audio_xa = getValueFor(QString("xa"), QString("false"))==QString("true") ? 1: 0;
-	cfg_bb10.audio_cdda = getValueFor(QString("cdda"), QString("false"))==QString("true") ? 1: 0;
+	cfg_bb10.audio_xa = getValueFor(QString("xa"), QString("false"))==QString("true") ? 0: 1;
+	cfg_bb10.audio_cdda = getValueFor(QString("cdda"), QString("false"))==QString("true") ? 0: 1;
 	cfg_bb10.analog_enabled = getValueFor(QString("analog_enabled"), QString("false"))==QString("true") ? 1: 0;
 	cfg_bb10.controllers = (Controller*)m_controllers;
 	cfg_bb10.chid = chid;

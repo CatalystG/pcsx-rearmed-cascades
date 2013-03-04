@@ -256,9 +256,9 @@ Page {
 	            id: picker
 	
 	            property string selectedFile
-	
+	            
 	            title: "Rom Selector"
-	            filter: ["*.bin", "*.cue"]
+	            filter: ["*.bin", "*.cue", "*.iso", "*.toc", "*.img", "*.ccd", "*.sub", "*.mdf", "*.mds", "*.Z", "*.bz", "*.cbn"]
 	            type: FileType.Other
 	
 	            onFileSelected: {

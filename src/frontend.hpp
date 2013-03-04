@@ -79,9 +79,9 @@ public:
     Q_INVOKABLE
     void loadBoxArt(const QString &url);
     Q_INVOKABLE
-    int getControllerValue(int player, int button_id);
+    int getControllerValue(int player, int button_id, int device);
     Q_INVOKABLE
-    void setControllerValue(int player, int button_id, int map);
+    void setControllerValue(int player, int button_id, int map, int device);
 
 signals:
 	void romChanged(QString);
