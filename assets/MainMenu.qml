@@ -3,6 +3,9 @@ import bb.cascades.pickers 1.0
 
 Page {
     id: menu
+    
+    property int resume
+    
     actionBarVisibility: {
         if(emulatorVisable){
             ChromeVisibility.Hidden
@@ -22,6 +25,23 @@ Page {
                     OrientationSupport.supportedDisplayOrientation = 
                             SupportedDisplayOrientation.DisplayLandscape;
                     emulatorVisable = true;
+                    resume = 1;
+                }
+            }
+        },
+        ActionItem {
+            title: "Resume"
+            ActionBar.placement: ActionBarPlacement.OnBar
+            imageSource: "asset:///images/ic_open.png"
+            enabled: _frontend.running
+            onTriggered: {
+                if(_frontend.rom == ""){
+                    //Do something to focus on select rom box
+                } else {
+                    OrientationSupport.supportedDisplayOrientation = 
+                            SupportedDisplayOrientation.DisplayLandscape;
+                    emulatorVisable = true;
+                    resume = 3;
                 }
             }
         }
@@ -279,7 +299,7 @@ Page {
 	        OrientationHandler {
 	              onOrientationChanged: {
 	                  if(OrientationSupport.supportedDisplayOrientation == SupportedDisplayOrientation.DisplayLandscape){
-	                      _frontend.startEmulator(1);
+	                      _frontend.startEmulator(resume);
 	                  }
 	              }
 	        }, 

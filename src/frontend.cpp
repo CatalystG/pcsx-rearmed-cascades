@@ -215,6 +215,7 @@ Frontend::Frontend()
 	qmlRegisterType<ImageLoader>();
 	mStartEmu = false;
 	m_boxart = 0;
+	m_running = false;
 
 	check_profile();
 
@@ -413,6 +414,8 @@ void Frontend::run()
 			MsgReply(rcvid, 0, &ret, sizeof(ret));
 		}
 
+		m_running = true;
+		emit runningChanged(m_running);
 		bb10_main(&screen_cxt, Application::instance()->mainWindow()->groupId().toAscii().constData(), "emulator_pcsx");
 	}
 }
@@ -507,6 +510,14 @@ ImageLoader* Frontend::getBoxArt()
 bool Frontend::boxartLoaded()
 {
 	return m_boxartLoaded;
+}
+
+bool Frontend::running() {
+	return m_running;
+}
+
+void Frontend::setRunning(bool running) {
+	 m_running = running;
 }
 
 void Frontend::loadBoxArt(const QString &url)

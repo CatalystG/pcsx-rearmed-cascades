@@ -31,6 +31,7 @@ class Frontend: public QThread
     Q_PROPERTY(QString rom READ getRom WRITE setRom NOTIFY romChanged)
     Q_PROPERTY(ImageLoader* boxart READ getBoxArt NOTIFY boxArtChanged)
     Q_PROPERTY(bool boxartLoaded READ boxartLoaded NOTIFY boxartLoadedChanged)
+    Q_PROPERTY(bool running READ running WRITE setRunning NOTIFY runningChanged)
 
 public:
     // This is our constructor that sets up the recipe.
@@ -87,6 +88,7 @@ signals:
 	void romChanged(QString);
 	void boxArtChanged(ImageLoader*);
 	void boxartLoadedChanged(bool);
+	void runningChanged(bool);
 
 public slots:
 	//void addCheatToggle(int);
@@ -101,7 +103,8 @@ private:
 	bool boxartLoaded();
 	void setRom(QString i);
 	ImageLoader* getBoxArt();
-
+	bool running();
+	void setRunning(bool);
 
     void run();
     //Container *createCheatToggle(sCheatInfo *pCur);
@@ -109,6 +112,7 @@ private:
     void create_button_mapper();
     int loadConfigFromJson(QString file);
     void saveConfigToJson(QString file);
+
     bool mStartEmu;
     int mVideoPlugin;
     QString mRom;
@@ -117,6 +121,7 @@ private:
     ImageLoader* m_boxart;
     bool m_boxartLoaded;
     Controller m_controllers[2];
+    bool m_running;
 };
 
 #endif // ifndef STARSHIPSETTINGSAPP_H
