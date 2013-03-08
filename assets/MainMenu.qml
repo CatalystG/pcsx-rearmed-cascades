@@ -5,6 +5,7 @@ Page {
     id: menu
     
     property int resume
+    property bool boxartEnabled
     
     actionBarVisibility: {
         if(emulatorVisable){
@@ -45,11 +46,7 @@ Page {
                 }
             }
         }
-    ]
-    
-    property alias romDirectory: picker.directories
-    property bool boxartEnabled
-    property bool useNetImage: false    
+    ]   
     
     titleBar: TitleBar {
         id: titleBar
@@ -272,54 +269,13 @@ Page {
 	    } // Content Container
 	    
 	    attachedObjects: [
-	        FilePicker {
-	            id: picker
-	
-	            property string selectedFile
-	            
-	            title: "Rom Selector"
-	            filter: ["*.bin", "*.cue", "*.iso", "*.toc", "*.img", "*.ccd", "*.sub", "*.mdf", "*.mds", "*.Z", "*.bz", "*.cbn"]
-	            type: FileType.Other
-	
-	            onFileSelected: {
-	                _frontend.rom = selectedFiles[0];
-	                selectedFile = _frontend.rom.substr(_frontend.rom.lastIndexOf('/')+1);
-	                picker.directories = [_frontend.rom.substr(0, _frontend.rom.lastIndexOf('/'))];
-	                
-	                if(boxartEnabled){
-	                    var tmp = picker.selectedFile.indexOf("(")
-		                if(tmp == -1){
-		                    _tracker.imageSource = "file:///accounts/1000/shared/misc/pcsx-rearmed-bb/.boxart/" + picker.selectedFile.substr(0, picker.selectedFile.lastIndexOf(".")).trim() + ".jpg";
-		                } else {
-		                    _tracker.imageSource = "file:///accounts/1000/shared/misc/pcsx-rearmed-bb/.boxart/" + picker.selectedFile.substr(0, tmp).trim() + ".jpg";
-		                }
-	                }
-	            }
-	        },
+	        
 	        OrientationHandler {
 	              onOrientationChanged: {
 	                  if(OrientationSupport.supportedDisplayOrientation == SupportedDisplayOrientation.DisplayLandscape){
 	                      _frontend.startEmulator(resume);
 	                  }
 	              }
-	        }, 
-	        ImageTracker {
-	            id: _tracker
-	            //imageSource: "file://shared/misc/pcsx-rearmed-pb/boxart/" + picker.selectedFile.substr(0,picker.selectedFile.lastIndexOf(".")) + ".jpg"
-	        
-	            onStateChanged: {
-	                if (state == 0x2) {//Loaded
-	                    //_frontend.boxart.image = _tracker.image;
-	                    useNetImage = false;
-	                } else if (state == 0x3) {//Not found
-	                    //console.log("Image Not Found: " + _tracker.imageSource);
-	                    _frontend.loadBoxArt(picker.selectedFile);
-	                    useNetImage = true;
-	                } else if (state > 0x3 ) { //Error states
-	                    //myImageView.imageSource = "asset:///images/ps1_icon.png";
-	                    //console.log("Image Failed: " + _tracker.imageSource);
-	                }
-	            }
 	        }
 	    ]           
 	} 
