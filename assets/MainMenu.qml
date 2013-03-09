@@ -269,7 +269,6 @@ Page {
 	    } // Content Container
 	    
 	    attachedObjects: [
-	        
 	        OrientationHandler {
 	              onOrientationChanged: {
 	                  if(OrientationSupport.supportedDisplayOrientation == SupportedDisplayOrientation.DisplayLandscape){

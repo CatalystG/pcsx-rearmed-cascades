@@ -328,10 +328,11 @@ void Frontend::onManualExit() {
 
 	printf("Saved Config!\n");fflush(stdout);
 
-	bb10_pcsx_stop_emulator();
+	if(!m_running){
+		int msg = 2;
+		MsgSend(coid, &msg, sizeof(msg), NULL, 0);
+	}
 
-	int msg = 2;
-	MsgSend(coid, &msg, sizeof(msg), NULL, 0);
 	wait();
 	printf("FInished waiting!\n");fflush(stdout);
 	quit();
@@ -352,11 +353,12 @@ void Frontend::run()
 
 	discoverControllers();
 
-	while(1) {
+	//while(1) {
 		while(1){
 			rcvid = MsgReceive(chid, &msg, sizeof(msg), 0);
 
 			if(rcvid <= 0){
+				MsgReply(rcvid, 0, NULL, 0);
 				continue;
 			}
 
@@ -366,6 +368,8 @@ void Frontend::run()
 			} else if (msg.msg == 2){
 				MsgReply(rcvid, 0, NULL, 0);
 				return;
+			} else {
+				MsgReply(rcvid, 0, NULL, 0);
 			}
 
 			z = 5;
@@ -417,7 +421,7 @@ void Frontend::run()
 		m_running = true;
 		emit runningChanged(m_running);
 		bb10_main(&screen_cxt, Application::instance()->mainWindow()->groupId().toAscii().constData(), "emulator_pcsx");
-	}
+	//}
 }
 
 QString Frontend::getValueFor(const QString &objectName, const QString &defaultValue)
@@ -600,7 +604,8 @@ void Frontend::setSettings()
 	cfg_bb10.frameskip = getValueFor(QString("frameskip"), QString("0")).toInt();//= -1, 1, 0
 	//BIOS, find bios with picker
 	//TODO: free bios_name
-	cfg_bb10.bios_name = strdup((char*)getValueFor(QString("bios_name"), QString("SCPH1001.BIN")).toAscii().constData());
+	cfg_bb10.bios = strdup((char*)getValueFor(QString("bios"), QString("SCPH1001.BIN")).toAscii().constData());
+	cfg_bb10.biosDir = strdup((char*)getValueFor(QString("biosDir"), QString("/accounts/1000/shared/misc/pcsx-rearmed-bb/bios/")).toAscii().constData());
 
 	//AUDIO
 	cfg_bb10.audio_xa = getValueFor(QString("xa"), QString("false"))==QString("true") ? 0: 1;

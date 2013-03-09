@@ -1,4 +1,5 @@
 import bb.cascades 1.0
+import bb.cascades.pickers 1.0 
 
 Page { 
     property alias sdcard: sdcard.checked
@@ -51,7 +52,6 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
                 preferredWidth: 768
                 text: "Default to SD Card"
-                textStyle.base: textStyleBoldTitle.style
             }
             
             ToggleButton {
@@ -91,7 +91,6 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
                 preferredWidth: 768
                 text: "Per Rom Video Settings"
-                textStyle.base: textStyleBoldTitle.style
             }
             
             ToggleButton {
@@ -130,7 +129,6 @@ Page {
                 verticalAlignment: VerticalAlignment.Center
                 preferredWidth: 768
                 text: "Boxart Scraping"
-                textStyle.base: textStyleBoldTitle.style
             }
             
             ToggleButton {
@@ -156,5 +154,65 @@ Page {
         }
         
         Divider {}
+        
+        Label {
+			horizontalAlignment: HorizontalAlignment.Left
+			verticalAlignment: VerticalAlignment.Center
+			preferredWidth: 768
+			text: "Bios Selection"
+        }
+        
+        Container {
+            preferredWidth: 650
+            horizontalAlignment: HorizontalAlignment.Center
+            
+            Container {
+                preferredWidth: 650
+                horizontalAlignment: HorizontalAlignment.Center
+                
+                layout: StackLayout {
+                    orientation: LayoutOrientation.LeftToRight
+                }
+                
+                TextField {
+                    id: biosName
+                    verticalAlignment: VerticalAlignment.Center
+                    enabled: false
+                    hintText: "Select the BIOS"
+                    text: _frontend.getValueFor("bios", "/accounts/1000/shared/misc/pcsx-rearmed-bb/bios/SCPH1001.BIN")
+                }
+                
+                Button {
+                    text: "..."
+                    horizontalAlignment: HorizontalAlignment.Right
+                    preferredWidth: 1
+                    onClicked: {
+                        biosPicker.open();
+                    }
+                }
+            }
+            
+        } // Top Container
+        
+        Divider {}
+        
+        attachedObjects: [
+	         FilePicker {
+     	        id: biosPicker
+     	
+     	        property string selectedBios
+     	        
+     	        title: "Bios Selector"
+     	        filter: ["*.bin", "*.BIN"]
+     	        type: FileType.Other
+     	        directories: ["/accounts/1000/shared/misc/pcsx-rearmed-bb/bios"]
+     	
+     	        onFileSelected: {
+     	            selectedBios = selectedFiles[0].substr(selectedFiles[0].lastIndexOf('/')+1);
+     	            _frontend.saveValueFor("bios", selectedBios);
+     	            _frontend.saveValueFor("biosDir", selectedFiles[0].substr(0, selectedFiles[0].lastIndexOf('/')+1));
+     	        }
+     	    }   
+ 	    ]
     }
 }
