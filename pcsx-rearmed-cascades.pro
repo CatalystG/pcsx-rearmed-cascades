@@ -8,7 +8,7 @@ SOURCES += ../src/*.cpp
 #SOURCES += ../src/*.c
 HEADERS += ../src/*.hpp
 
-LIBS += -L../lib -lscreen -lasound -lTouchControlOverlay -lpng -lz -lbps -Bstatic -L ../../libpcsx-rearmed-bb10 -lpcsx -Bdynamic#-L ../../libpcsx-rearmed-bb10 -lpcsx 
+LIBS += -L../lib -lscreen -lasound -lTouchControlOverlay -lpng -lz -lbps -Bstatic -L ../../pcsx_rearmed_bb10 -lpcsx -Bdynamic#-L ../../libpcsx-rearmed-bb10 -lpcsx 
 
 LIBS += -lbbcascadespickers -lbbsystem -lbbdata
 INCLUDEPATH += ${QNX_TARGET}/usr/include/bb/cascades/pickers

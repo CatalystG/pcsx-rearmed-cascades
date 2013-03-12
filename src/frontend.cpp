@@ -64,6 +64,7 @@ typedef union {
 }recv_msg;
 
 QString CheatList = "";
+
 enum {
 	DKEY_SELECT = 0,
 	DKEY_L3,
@@ -81,6 +82,29 @@ enum {
 	DKEY_CIRCLE,
 	DKEY_CROSS,
 	DKEY_SQUARE,
+};
+
+QString gamepad_button_string[] = {
+	"A",
+	"B",
+	"C",
+	"X",
+	"Y",
+	"Z",
+	"Menu1",
+	"Menu2",
+	"Menu3",
+	"Menu4",
+	"L1",
+	"L2",
+	"L3",
+	"R1",
+	"R2",
+	"R3",
+	"Dpad Up",
+	"Dpad Down",
+	"Dpad Left",
+	"Dpad Right"
 };
 
 SettingsBB10 cfg_bb10;
@@ -158,7 +182,7 @@ void Frontend::create_button_mapper() {
 	screen_request_events(screen_cxt);
 }
 
-void discoverControllers()
+void Frontend::discoverControllers()
 {
     // Get an array of all available devices.
     int deviceCount = 0;
@@ -180,24 +204,28 @@ void discoverControllers()
         	qDebug() << "Found device GAMEPAD/JOYSTICK";
 
             // Assign this device to control Player 1 or Player 2.
-        	cfg_bb10.controllers[0].handle = devices[i];
+        	m_controllers[0].handle = devices[i];
         	// Query libscreen for information about this device.
-			screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_TYPE, &cfg_bb10.controllers[0].type);
-			screen_get_device_property_cv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ID_STRING, sizeof(cfg_bb10.controllers[0].id), cfg_bb10.controllers[0].id);
+			screen_get_device_property_iv(m_controllers[0].handle, SCREEN_PROPERTY_TYPE, &m_controllers[0].type);
+			qDebug() << "Type: " << m_controllers[0].type;
+			screen_get_device_property_cv(m_controllers[0].handle, SCREEN_PROPERTY_ID_STRING, sizeof(m_controllers[0].id), m_controllers[0].id);
+			qDebug() << "Id: " << m_controllers[0].id;
 
 			// Check for the existence of analog sticks.
-			if (!screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ANALOG0, cfg_bb10.controllers[0].analog0)) {
-				++cfg_bb10.controllers[0].analogCount;
+			if (!screen_get_device_property_iv(m_controllers[0].handle, SCREEN_PROPERTY_ANALOG0, m_controllers[0].analog0)) {
+				++m_controllers[0].analogCount;
 			}
 
-			if (!screen_get_device_property_iv(cfg_bb10.controllers[0].handle, SCREEN_PROPERTY_ANALOG1, cfg_bb10.controllers[0].analog1)) {
-				++cfg_bb10.controllers[0].analogCount;
+			if (!screen_get_device_property_iv(m_controllers[0].handle, SCREEN_PROPERTY_ANALOG1, m_controllers[0].analog1)) {
+				++m_controllers[0].analogCount;
 			}
 
-			if (cfg_bb10.controllers[0].type == SCREEN_EVENT_GAMEPAD) {
-				printf("Gamepad device ID: %s", cfg_bb10.controllers[0].id);
+			qDebug() << "After Analog";
+
+			if (m_controllers[0].type == SCREEN_EVENT_GAMEPAD) {
+				qDebug() << "Gamepad device ID: " << m_controllers[0].id;
 			} else {
-				printf("Joystick device: %s", cfg_bb10.controllers[0].id);
+				qDebug() << "Joystick device: " << m_controllers[0].id;
 			}
 
 			break;
@@ -326,18 +354,14 @@ void Frontend::onManualExit() {
 
 	saveConfigToJson(QString("shared/misc/pcsx-rearmed-bb/cfg/data.json"));
 
-	printf("Saved Config!\n");fflush(stdout);
-
-	if(!m_running){
+	if(!m_running || m_inMenu){
 		int msg = 2;
 		MsgSend(coid, &msg, sizeof(msg), NULL, 0);
 	}
 
 	wait();
-	printf("FInished waiting!\n");fflush(stdout);
 	quit();
 
-	printf("OnManualExit end!\n");fflush(stdout);
 }
 
 //A separate QThread that runs the emulator.
@@ -359,7 +383,7 @@ void Frontend::run()
 
 			if(rcvid <= 0){
 				MsgReply(rcvid, 0, NULL, 0);
-				continue;
+				return;
 			}
 
 			if(msg.msg == 1){
@@ -368,6 +392,8 @@ void Frontend::run()
 			} else if (msg.msg == 2){
 				MsgReply(rcvid, 0, NULL, 0);
 				return;
+			} else if (msg.msg == 4){
+				//Continue on to button map screen
 			} else {
 				MsgReply(rcvid, 0, NULL, 0);
 			}
@@ -396,13 +422,15 @@ void Frontend::run()
 						//TODO: Should we only let the buttons through that we are trying to map?
 						if(screen_val == SCREEN_EVENT_MTOUCH_TOUCH){
 							//This is touch screen event
-							sym = -1;
+							sym = 0;
 							break;
 						} else if(screen_val == SCREEN_EVENT_KEYBOARD) {
 							screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_KEY_SYM, &sym);
+							sym &= 0xFF;
 							break;
 						} else if( (screen_val == SCREEN_EVENT_GAMEPAD) || (screen_val == SCREEN_EVENT_JOYSTICK) ){
 							screen_get_event_property_iv(screen_event, SCREEN_PROPERTY_BUTTONS, &sym);
+							break;
 						}
 					}
 				}
@@ -414,8 +442,7 @@ void Frontend::run()
 			}
 			screen_post_window(screen_win_map, screen_buf[0], 1, rect, 0);
 
-			int ret = sym&0xff;
-			MsgReply(rcvid, 0, &ret, sizeof(ret));
+			MsgReply(rcvid, 0, &sym, sizeof(sym));
 		}
 
 		m_running = true;
@@ -450,31 +477,36 @@ void Frontend::setControllerValue(int player, int button_id, int map, int device
 		return;
 	}
 
-	qDebug() << "getControllerValue Device: " << device;
-
 	if(m_controllers[player].device == 2) {
 		m_controllers[player].buttons[button_id] = map;
-		qDebug() << "setControllerValue Value: " << map;
 	} else if(m_controllers[player].device == 3) {
 		m_controllers[player].gamepad[button_id] = map;
-		qDebug() << "setControllerValue Value: " << map;
 	}
 }
 
-int Frontend::getControllerValue(int player, int button_id, int device){
+QVariant Frontend::getControllerValue(int player, int button_id, int device) {
 	if(button_id == -1){
-		return m_controllers[player].device;
+		return QVariant(m_controllers[player].device);
 	}
 
-	qDebug() << "getControllerValue Device: " << device;
+	//Keyboard
 	if(m_controllers[player].device == 2) {
-		int tmp = m_controllers[player].buttons[button_id];
-		qDebug() << "getControllerValue Value: " << tmp;
-		return tmp;
+		return QVariant(m_controllers[player].buttons[button_id]);
+	//Gamepad
 	} else if(m_controllers[player].device == 3) {
-		int tmp = m_controllers[player].gamepad[button_id];
-		qDebug() << "getControllerValue Value: " << tmp;
-		return tmp;
+		int count = 0, tmp = m_controllers[player].gamepad[button_id];
+
+		if(m_controllers[player].gamepad[button_id] == 0){
+			return QVariant("Unmapped");
+		}
+
+		while(!(tmp&0x1)){
+			 tmp = tmp >> 1;
+			 count++;
+		}
+
+		return QVariant(gamepad_button_string[count]);
+
 	}
 
 	return 0;
@@ -487,6 +519,7 @@ void Frontend::startEmulator(int msg_code)
 
 	int msg = msg_code;
 
+	m_inMenu = false;
 	MsgSend(coid, &msg, sizeof(msg), NULL, 0);
 
 	return;
@@ -792,12 +825,15 @@ void Frontend::LoadState() {
 
 void Frontend::EnterMenu(int code) {
 	//code 1 is from normal enter, 2 is from disc swap
+	if(code == 1){
+		m_inMenu = true;
+	}
 	bb10_pcsx_enter_menu(code);
 }
 
 int Frontend::mapButton(){
 
-	int msg = 0, ret = 0;
+	int msg = 4, ret = 0;
 
 	toastButton->cancel();
 	toast->setBody("Press a Button to Map");

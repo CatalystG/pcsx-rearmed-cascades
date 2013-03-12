@@ -25,14 +25,14 @@ Container {
 	        id: _mapping
 	        horizontalAlignment: HorizontalAlignment.Right
 	        verticalAlignment: VerticalAlignment.Center
-	        minWidth: 200
-	        text: _frontend.getControllerValue(player, button_id, device).toString()
+	        minWidth: 250
+	        text: _frontend.getControllerValue(player, button_id, device)
 	        
 	        onClicked: {
 	            var mapButton = _frontend.mapButton();
 	            if(mapButton != -1){
 	                _frontend.setControllerValue(player, button_id, mapButton, device);
-	                _mapping.text = _frontend.getControllerValue(player, button_id, device).toString();
+	                _mapping.text = _frontend.getControllerValue(player, button_id, device);
 	            }
 	        }
 	    }

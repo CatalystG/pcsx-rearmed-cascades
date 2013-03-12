@@ -80,7 +80,7 @@ public:
     Q_INVOKABLE
     void loadBoxArt(const QString &url);
     Q_INVOKABLE
-    int getControllerValue(int player, int button_id, int device);
+    QVariant getControllerValue(int player, int button_id, int device);
     Q_INVOKABLE
     void setControllerValue(int player, int button_id, int map, int device);
 
@@ -105,6 +105,7 @@ private:
 	ImageLoader* getBoxArt();
 	bool running();
 	void setRunning(bool);
+	void discoverControllers();
 
     void run();
     //Container *createCheatToggle(sCheatInfo *pCur);
@@ -122,6 +123,7 @@ private:
     bool m_boxartLoaded;
     Controller m_controllers[2];
     bool m_running;
+    bool m_inMenu;
 };
 
 #endif // ifndef STARSHIPSETTINGSAPP_H

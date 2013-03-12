@@ -60,10 +60,9 @@
 
     <!-- Application assets -->
     <asset path="assets">assets</asset>
-    <asset path="${workspace_loc:/libpcsx-rearmed-bb10/libpcsx.so}" type="Qnx/Elf">lib/libpcsx.so</asset>
-    <asset path="${workspace_loc:/libpcsx-rearmed-bb10/assets}">.</asset>
-    <asset path="${workspace_loc:/libpcsx-rearmed-bb10/assets/icon.png}">icon.png</asset>
     <asset path="lib/libTouchControlOverlay.so" type="Qnx/Elf">lib/libTouchControlOverlay.so</asset>
+    <asset path="${workspace_loc:/pcsx_rearmed_bb10/libpcsx.a}">libpcsx.a</asset>
+    <asset path="${workspace_loc:/pcsx_rearmed_bb10/assets}">.</asset>
 
     <!-- Bright theme is used for this application. --> 
 	<cascadesTheme>bright</cascadesTheme>
